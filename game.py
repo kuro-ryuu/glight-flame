@@ -1,6 +1,7 @@
 import connect_to_db
 import random
 import time
+import keyboard
 db_connection = connect_to_db().connect()
 def map_choosing(): 
     pass
@@ -16,8 +17,20 @@ while (True):
         magnitude=1
     else: 
         pass #TODO later
+    last_command_time = 0
+    command_interval = 0.5  # seconds
+    playerpos=0
     while (True): #TODO change condition later
-        obstacle_gen(random.randint(3,7))
-        disaster_gen(delay,magnitude)
+        now = time.time()
+        if now - last_command_time > command_interval:
+            #GAME LOGIC HERE
+            obstacle_gen(random.randint(3,7))
+            disaster_gen(delay,magnitude)
+            last_command_time = now
+
+        #KEYBOARD HANDING
+        if keyboard.is_pressed('a'): playerpos-=1
+        if keyboard.is_pressed('d'): playerpos+=1
+        
         #if score... stop game #TODO
-        time.sleep(0.5)
+        time.sleep(0.01)
