@@ -2,7 +2,7 @@ import mysql.connector
 import connect_to_db
 import random
 import time
-import tkinter
+import keyboard
 db_connection = connect_to_db().connect()
 def map_gen(map):
     pass
@@ -20,14 +20,20 @@ while (True):
         magnitude=1
     else: 
         pass #TODO later
+    last_command_time = 0
+    command_interval = 0.5  # seconds
+    playerpos=0
     while (True): #TODO change condition later
-# Map generation
-            rows, cols = 5, 10
-    board = [["⬚" for _ in range(cols)] for _ in range(rows)]
+        now = time.time()
+        if now - last_command_time > command_interval:
+            #GAME LOGIC HERE
+            obstacle_gen(random.randint(3,7))
+            disaster_gen(delay,magnitude)
+            last_command_time = now
 
-    for row in board:
-        print(" ".join(row))
-        obstacle_gen(random.randint(3,7))
-        disaster_gen(delay,magnitude)
+        #KEYBOARD HANDING
+        if keyboard.is_pressed('a'): playerpos-=1
+        if keyboard.is_pressed('d'): playerpos+=1
+        
         #if score... stop game #TODO
-        time.sleep(0.5)
+        time.sleep(0.01)
