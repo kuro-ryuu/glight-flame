@@ -1,7 +1,11 @@
+import mysql.connector
 import connect_to_db
 import random
 import time
+import tkinter
 db_connection = connect_to_db().connect()
+def map_gen(map):
+    pass
 def map_choosing(): 
     pass
 def obstacle_gen(number):
@@ -17,6 +21,12 @@ while (True):
     else: 
         pass #TODO later
     while (True): #TODO change condition later
+# Map generation
+            rows, cols = 5, 10
+    board = [["⬚" for _ in range(cols)] for _ in range(rows)]
+
+    for row in board:
+        print(" ".join(row))
         obstacle_gen(random.randint(3,7))
         disaster_gen(delay,magnitude)
         #if score... stop game #TODO
