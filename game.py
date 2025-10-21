@@ -1,8 +1,4 @@
-import mysql.connector
-import connect_to_db
-import random
-import time
-import keyboard
+import mysql.connector, connect_to_db, random, time, keyboard
 db_connection = connect_to_db().connect()
 def map_gen(map):
     pass
