@@ -11,7 +11,7 @@ delay=0
 magnitude=0
 
 last_command_time = 0
-obs_interval = 1
+obs_interval = 0.6
 last_key_time=0  # seconds
 key_delay=0.2
 playerpos=0
@@ -46,7 +46,7 @@ while (True):
     
     while (True): #TODO change condition later
         # render and draw (simple full redraw)
-        header = f"Remaining fuel: {fuel}"
+        header = f"{coords_list} Fuel: {fuel} PlayerPos: {playerpos},{map_height - 1}"
         render.set_state(coords_list, map_width, map_height, playerpos)
         render.render_and_draw(header)
         now = time.time()

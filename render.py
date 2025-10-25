@@ -18,14 +18,12 @@ def render_rows():
     for y in range(map_height):
         row = []
         for x in range(map_width):
-            if (x, y) == (playerpos, map_height - 1):
+            if [x, y] in coords_list and y == map_height - 1 and x == playerpos:
+                exit("Game Over! You hit an obstacle.")
+            elif (x, y) == (playerpos, map_height - 1):
                 row.append("A")
             elif coords_list and [x, y] in coords_list:
-                row.append("O")
-            
-            elif (playerpos, map_height - 1) in coords_list:
-                
-
+                row.append("O")            
             else:
                 row.append(" ")
         out_lines.append("".join(row))
