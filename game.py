@@ -3,7 +3,7 @@ import sys
 import render
 #some basic variables
 coords_list = []  # list of [x, y]
-map_height=20
+map_height=10
 map_width=10
 
 fuel=1000
@@ -46,7 +46,8 @@ while (True):
     
     while (True): #TODO change condition later
         # render and draw (simple full redraw)
-        header = f"{coords_list} Fuel: {fuel} PlayerPos: {playerpos},{map_height - 1}"
+        #header = f"{coords_list} Fuel: {fuel} PlayerPos: {playerpos},{map_height - 1}"
+        header = f"Fuel: {fuel} "
         render.set_state(coords_list, map_width, map_height, playerpos)
         render.render_and_draw(header)
         now = time.time()
