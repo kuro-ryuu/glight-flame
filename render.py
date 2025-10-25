@@ -22,6 +22,10 @@ def render_rows():
                 row.append("A")
             elif coords_list and [x, y] in coords_list:
                 row.append("O")
+            
+            elif (playerpos, map_height - 1) in coords_list:
+                
+
             else:
                 row.append(" ")
         out_lines.append("".join(row))
