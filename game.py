@@ -13,7 +13,7 @@ magnitude=0
 last_command_time = 0
 obs_interval = 0.6
 last_key_time=0  # seconds
-pause = False
+paused = 0
 key_delay=0.2
 playerpos=0
 # import mysql.connector, connect_to_db #   TODO WHY ERROR????
@@ -34,6 +34,8 @@ def obstacle_gen(number):
     coords_list[:] = [p for p in coords_list if p[1] < map_height]
 def disaster_gen(delay,magnitude):
     pass
+
+
 
 while (True):
     # #map picking
@@ -56,7 +58,6 @@ while (True):
             obstacle_gen(random.randint(0, map_width - 1))
             disaster_gen(delay,magnitude)
             last_command_time = now
-
         #KEYBOARD HANDING (throttle by last_key_time)
         if (now - last_key_time > key_delay):
             moved = False
@@ -66,15 +67,32 @@ while (True):
             if keyboard.is_pressed('d'):
                 playerpos += 1
                 moved = True
+            if keyboard.is_pressed('spacebar'):
+                while paused == 0:
+                    print("Game Paused. Press Spacebar to resume.")
+                    paused += 1
+                    if paused == 1:
+                        pause = time.sleep(0.1) #toggling slep
+            while paused == 1:
+                if keyboard.is_pressed('spacebar'):
+                    paused -= 1
+                    print("Game Resume in: ") 
+                    for i in range (5, 0, -1):
+                        print(i)
+                        time.sleep(1)        
+            if keyboard.is_pressed('q'):
+                exit("Game quit. Thank you for playing!")
             if moved:
                 # clamp to map bounds
                 if playerpos < 0:
                     playerpos = 0
+                    moved = False
                 if playerpos > map_width - 1:
-                    playerpos = map_width - 1
-                fuel -= 10
+                    playerpos = map_width -1
+                    moved = False
+                if moved:
+                    fuel -= 10
                 last_key_time = now
-                # immediate redraw so movement appears instantly
                 render.set_state(coords_list, map_width, map_height, playerpos)
                 render.render_and_draw(header)
         if fuel == 0:
