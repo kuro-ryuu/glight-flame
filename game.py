@@ -13,6 +13,7 @@ magnitude=0
 last_command_time = 0
 obs_interval = 0.6
 last_key_time=0  # seconds
+pause = False
 key_delay=0.2
 playerpos=0
 # import mysql.connector, connect_to_db #   TODO WHY ERROR????
@@ -76,6 +77,8 @@ while (True):
                 # immediate redraw so movement appears instantly
                 render.set_state(coords_list, map_width, map_height, playerpos)
                 render.render_and_draw(header)
+        if fuel == 0:
+            exit("Game Over! You ran out of fuel.")
 
         #if score... stop game #TODO
         time.sleep(0.01)
