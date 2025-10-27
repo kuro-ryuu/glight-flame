@@ -1,5 +1,4 @@
 import sys
-
 # module-level rendering state (set via set_state or by assigning attributes)
 coords_list = []
 map_width = 0
