@@ -1,2 +1,3 @@
 LIBRARIES 
-pip install keyboard mysql.connector numpy
+
+pip install keyboard numpy
