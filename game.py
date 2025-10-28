@@ -2,21 +2,25 @@ import random, time, keyboard
 import sys
 import render
 #some basic variables
-coords_list = []  # list of [x, y]
-map_height=10
-map_width=10
-score=0
+def var_setup():
+    global coords_list, map_height, map_width, fuel, delay, magnitude
+    global last_command_time, obs_interval, last_key_time, paused, key_delay
+    global playerpos, score
+    coords_list = []  # list of [x, y]
+    map_height=10
+    map_width=10
+    score=0
 
-fuel=1000
-delay=0
-magnitude=0
+    fuel=1000
+    delay=0
+    magnitude=0
 
-last_command_time = 0
-obs_interval = 0.6
-last_key_time=0  # seconds
-paused = 0
-key_delay=0.2
-playerpos=0
+    last_command_time = 0
+    obs_interval = 0.6
+    last_key_time=0  # seconds
+    paused = 0
+    key_delay=0.2
+    playerpos=0
 # import mysql.connector, connect_to_db #   TODO WHY ERROR????
 # db_connection = connect_to_db().connect()
 # rendering moved to render.py
@@ -48,7 +52,7 @@ while (True):
     #     magnitude=1
     # else: 
     #     pass #TODO later
-    
+    var_setup()
     while (True): #TODO change condition later
         # render and draw (simple full redraw)
         #header = f"{coords_list} Fuel: {fuel} PlayerPos: {playerpos},{map_height - 1}"
