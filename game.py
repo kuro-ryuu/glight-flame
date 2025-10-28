@@ -1,6 +1,10 @@
 import random, time, keyboard
 import sys
 import render
+import connect_to_db
+import mysql.connector
+
+db_connection=connect_to_db.connect()
 #some basic variables
 def var_setup():
     global coords_list, map_height, map_width, fuel, delay, magnitude
@@ -129,4 +133,4 @@ while (True):
             exit("Game Over! You ran out of fuel.")
 
         #if score... stop game #TODO
-        time.sleep(0.5)
+        time.sleep(0.01)
