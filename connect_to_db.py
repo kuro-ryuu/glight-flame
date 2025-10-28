@@ -4,8 +4,8 @@ def connect():
         host='localhost',
         port=3306,
         database='flight_game',
-        user='root',
-        password='password',
+        user='CDKR',
+        password='1507',
         autocommit=True
     )
     return conn

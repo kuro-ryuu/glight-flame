@@ -60,7 +60,18 @@ while airport_pick not in airports_in_continent:
     else:
         print("Airports not selected, please try again")
 def obstacle_gen(number):
-    pass
+    global score
+    # Add new obstacle at (number, -1) if not present
+    if [number, -1] not in coords_list:
+        coords_list.append([number, -1])
+        score += 10
+
+    # Move all obstacles down (y += 1)
+    for i, p in enumerate(coords_list):
+        coords_list[i][1] = p[1] + 1
+
+    # Remove obstacles that are out of bounds (y >= map_height)
+    coords_list[:] = [p for p in coords_list if p[1] < map_height]
 def disaster_gen(delay,magnitude):
     pass
 while (True):
