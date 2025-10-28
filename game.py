@@ -2,7 +2,7 @@ import random, time, keyboard
 import sys
 import render
 import connect_to_db
-import mysql.connector
+import sqlite3
 
 db_connection=connect_to_db.connect()
 #some basic variables
