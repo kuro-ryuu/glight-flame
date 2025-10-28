@@ -80,7 +80,7 @@ while (True):
                     while True:
                         if keyboard.is_pressed('space'):
                             print("Game resuming in:")
-                            for i in range(5, 0, -1):
+                            for i in range(3, 0, -1):
                                 print(i)
                                 time.sleep(1)
                             print("Go!")
