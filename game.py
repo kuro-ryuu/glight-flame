@@ -2,8 +2,9 @@ import random, time, keyboard
 import sys
 import render
 import sqlite3
+import db_init
 
-db_connection=sqlite3.connect("./database/storage.db")
+db_connection=db_init.open_db()
 db_connection.row_factory = sqlite3.Row
 
 #some basic variables
@@ -26,9 +27,7 @@ def var_setup():
     paused = 0
     key_delay=0.2
     playerpos=0
-# import mysql.connector, connect_to_db #   TODO WHY ERROR????
-# db_connection = connect_to_db().connect()
-# rendering moved to render.py
+
 def map_choosing():
     pass
 def get_airports(conti):
