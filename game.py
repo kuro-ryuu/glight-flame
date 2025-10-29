@@ -1,10 +1,11 @@
 import random, time, keyboard
 import sys
 import render
-import connect_to_db
 import sqlite3
 
-db_connection=connect_to_db.connect()
+db_connection=sqlite3.connect("./database/storage.db")
+db_connection.row_factory = sqlite3.Row
+
 #some basic variables
 def var_setup():
     global coords_list, map_height, map_width, fuel, delay, magnitude
@@ -35,9 +36,9 @@ def get_airports(conti):
 FROM airport
 WHERE continent = '{conti}' 
 AND type='large_airport'
-ORDER by RAND()
+ORDER BY RANDOM()
 LIMIT 30;"""
-    cursor = db_connection.cursor(dictionary=True)
+    cursor = db_connection.cursor()
     cursor.execute(sql)
     result = cursor.fetchall()
     return result
