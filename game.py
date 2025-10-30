@@ -36,29 +36,31 @@ FROM airport
 WHERE continent = '{conti}' 
 AND type='large_airport'
 ORDER by RAND()
-LIMIT 30;"""
+LIMIT 10;"""
     cursor = db_connection.cursor(dictionary=True)
     cursor.execute(sql)
     result = cursor.fetchall()
     return result
 
-choose_continent = input("Enter your continent (EU or AS): ")
+while (choose_continent := input("Enter continent number - 1 (AS) or 2 (EU): ")) not in ("1","2"):
+    print("Please choose no. 1 or 2. ")
+choose_continent="AS" if choose_continent=="1" else "EU"
 airports_in_continent = get_airports(choose_continent)
 final_result = [list(i) for i in airports_in_continent]
 airport_list = final_result[2]
 
-for airport in airports_in_continent:
-    print(airport["name"])
+for id,airport in enumerate(airports_in_continent):
+    print(f'{id}: {airport["name"]}')
 
-airport_pick = ""
-for i in range(len(airports_in_continent)):
-    airports_in_continent[i] = airports_in_continent[i]['name'].lower()
-while airport_pick not in airports_in_continent:
-    airport_pick = input("Select your airport: ").lower()
-    if airport_pick in airports_in_continent:
-        print("Airports selected")
-    else:
-        print("Airports not selected, please try again")
+while (airport_id:=int(input("Select airport number: "))) not in range(len(airports_in_continent)):
+    print("Please enter number in range! ")
+air_picked=airports_in_continent[airport_id]["name"]
+print(f"{air_picked}' selected!")
+print("Proceeding in... ")
+for i in range(3,0,-1): 
+    print(f"{i}")
+    time.sleep(1)
+
 def obstacle_gen(number):
     global score
     # Add new obstacle at (number, -1) if not present
@@ -87,7 +89,7 @@ while (True):
     while (True): #TODO change condition later
         # render and draw (simple full redraw)
         #header = f"{coords_list} Fuel: {fuel} PlayerPos: {playerpos},{map_height - 1}"
-        header = f"Score: {score}\nFuel: {fuel}\nPlayerPos: {playerpos},{map_height - 1}"
+        header = f"Current map: {air_picked}\nScore: {score}\nFuel: {fuel}\nPlayerPos: {playerpos},{map_height - 1}"
         render.set_state(coords_list, map_width, map_height, playerpos)
         render.render_and_draw(header)
         now = time.time()
