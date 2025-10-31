@@ -36,7 +36,7 @@ FROM airport
 WHERE continent = '{conti}' 
 AND type='large_airport'
 ORDER BY RANDOM()
-LIMIT 30;"""
+LIMIT 10;"""
     cursor = db_connection.cursor()
     cursor.execute(sql)
     result = cursor.fetchall()
