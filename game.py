@@ -1,10 +1,12 @@
 import random, time, keyboard
 import sys
 import render
-import connect_to_db
-import mysql.connector
+import sqlite3
+import db_init
 
-db_connection=connect_to_db.connect()
+db_connection=db_init.open_db()
+db_connection.row_factory = sqlite3.Row
+
 #some basic variables
 def var_setup():
     global coords_list, map_height, map_width, fuel, delay, magnitude
@@ -25,9 +27,7 @@ def var_setup():
     paused = 0
     key_delay=0.2
     playerpos=0
-# import mysql.connector, connect_to_db #   TODO WHY ERROR????
-# db_connection = connect_to_db().connect()
-# rendering moved to render.py
+
 def map_choosing():
     pass
 def get_airports(conti):
@@ -35,9 +35,9 @@ def get_airports(conti):
 FROM airport
 WHERE continent = '{conti}' 
 AND type='large_airport'
-ORDER by RAND()
-LIMIT 10;"""
-    cursor = db_connection.cursor(dictionary=True)
+ORDER BY RANDOM()
+LIMIT 30;"""
+    cursor = db_connection.cursor()
     cursor.execute(sql)
     result = cursor.fetchall()
     return result
