@@ -55,7 +55,7 @@ for id,airport in enumerate(airports_in_continent):
 while (airport_id:=int(input("Select airport number: "))) not in range(len(airports_in_continent)):
     print("Please enter number in range! ")
 air_picked=airports_in_continent[airport_id]["name"]
-print(f"{air_picked}' selected!")
+print(f"{air_picked} selected!")
 print("Proceeding in... ")
 for i in range(3,0,-1): 
     print(f"{i}")
