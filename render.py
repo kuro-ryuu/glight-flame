@@ -18,7 +18,7 @@ def render_rows():
         row = []
         for x in range(map_width):
             if [x, y] in coords_list and y == map_height - 1 and x == playerpos:
-                exit("Game Over! You hit an obstacle.")
+                return "GAME OVER"
             elif (x, y) == (playerpos, map_height - 1):
                 row.append("A")
             elif coords_list and [x, y] in coords_list:

@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Flight Game</title>
+  <style>
+    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 1rem; }
+    pre { background:#111; color:#0f0; padding:1rem; min-height:300px; }
+    .hint { margin-top: 0.5rem; color:#666 }
+  </style>
+</head>
+<body>
+  <h1>Flight Game</h1>
+  <pre id="frame">Loading...</pre>
+  <div class="hint">Use A / D or ArrowLeft / ArrowRight to move. Space to pause. Q to quit.</div>
+
+  <script>
+    const addr="http://127.0.0.1:5000";
+    const frameEl = document.getElementById('frame');
+    async function fetchFrame(){
+      try {
+        const r = await fetch(addr + '/frame');
+        const t = await r.text();
+        frameEl.textContent = t || '';
+      } catch(e){
+        frameEl.textContent = 'Error fetching frame';
+      }
+    }
+    setInterval(fetchFrame, 150);
+    fetchFrame();
+
+    window.addEventListener('keydown', (e)=>{
+      let key = e.key;
+      if (key === 'ArrowLeft') key = 'left';
+      if (key === 'ArrowRight') key = 'right';
+      if (key === ' ') key = 'space';
+      key = key.toLowerCase();
+      fetch(addr + '/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key})});
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>
