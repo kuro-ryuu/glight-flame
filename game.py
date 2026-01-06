@@ -22,7 +22,7 @@ def var_setup():
     magnitude=0
 
     last_command_time = 0
-    obs_interval = 0.6
+    obs_interval = 0.4
     last_key_time=0  # seconds
     paused = 0
     key_delay=0.2
