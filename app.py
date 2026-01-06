@@ -123,27 +123,16 @@ game_thread.start()
 app = Flask(__name__)
 CORS(app)
 
-@app.route('/key', methods=['POST', 'OPTIONS'])
+@app.route('/key', methods=['POST'])
 def post_key():
-    """Accepts JSON or form data with 'key' field (e.g. 'left','right','space','q' or 'a','d').
-    Also handles OPTIONS preflight requests."""
-    # Handle CORS preflight
-    if request.method == 'OPTIONS':
-        headers = {
-            'Access-Control-Allow-Methods': 'POST,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type',
-            'Access-Control-Allow-Origin': '*'
-        }
-        return Response(status=204, headers=headers)
-
+    """Accepts JSON or form data with 'key' field (e.g. 'left','right','space','q' or 'a','d')."""
     data = request.get_json(silent=True) or request.form or request.values
     key = data.get('key')
     if not key:
         return jsonify({'error': 'no key provided'}), 400
     with key_lock:
         globals()['key_pressed'] = key
-    headers = {'Access-Control-Allow-Origin': '*'}
-    return (jsonify({'status': 'ok', 'key': key}), 200, headers)
+    return jsonify({'status': 'ok', 'key': key})
 
 
 @app.route('/frame', methods=['GET'])
