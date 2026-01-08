@@ -1,0 +1,76 @@
+body {
+    background-color: #111;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    font-size: 20px;
+}
+
+
+.hint {
+    padding: 1rem;
+    width: 500px;
+    margin-top: 0.5 rem;
+    color: #0f0;
+    font-family: "Orbitron", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 900;
+    font-style: normal;
+    border: #0f0 2px;
+    border-style: dashed;
+    text-align: center;
+}
+
+
+h1 {
+    color: #0f0;
+    font-family: "Orbitron", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 900;
+    font-style: normal;
+    border: #0f0 2px;
+}
+
+
+.controls {
+    margin-top: 0.5 rem;
+    color: #0f0;
+    font-family: "Orbitron", sans-serif;
+    font-optical-sizing: auto;
+    font-weight: 900;
+    font-style: normal;
+    font-size: 48px;
+}
+
+
+.base {
+    font-family: "Orbitron", sans-serif;
+    margin: 1rem;
+    background-color: black;
+    display: flex;
+    flex-direction: row;
+    color: #0f0;
+    position: inherit;
+}
+
+
+pre {
+    background:#111;
+    color:#0f0;
+    padding:1rem;
+    min-height:300px;
+    text-align: center;
+    display: flex;
+}
+
+
+.game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: #0f0 2px;
+    border-style: dashed;
+    margin: 1rem;
+    width: 500px;
+}

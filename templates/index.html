@@ -3,17 +3,24 @@
 <head>
   <meta charset="utf-8">
   <title>Flight Game</title>
-  <style>
-    body { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; margin: 1rem; }
-    pre { background:#111; color:#0f0; padding:1rem; min-height:300px; }
-    .hint { margin-top: 0.5rem; color:#666 }
-  </style>
+  <link rel="stylesheet" href="app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
 </head>
 <body>
-  <h1>Flight Game</h1>
-  <pre id="frame">Loading...</pre>
-  <div class="hint">Use A / D or ArrowLeft / ArrowRight to move. Space to pause. Q to quit.</div>
-
+  <div class="base">
+  <div class="hint">
+    <br><div class="controls">Controls:</div>
+    <br>Movement: A / D or ArrowLeft / ArrowRight
+    <br>Space: Pause.
+    <br>Q: Quit.
+  </div>
+  <div class="game-area">
+    <h1>Flight Game</h1>
+    <pre id="frame">Loading...</pre>
+  </div>
+  </div>
   <script>
     const addr="http://127.0.0.1:5000";
     const frameEl = document.getElementById('frame');
