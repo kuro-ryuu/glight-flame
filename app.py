@@ -85,11 +85,14 @@ def game_loop():
                 render.set_state(coords_list, map_width, map_height, playerpos)
                 rows = render.render_rows()
                 if rows == "GAME OVER":
-                    rows = "Game Over! Press 'r' to restart."
-                    last_frame = header + "\n" + rows
 
+                    rows = "Game Over! Press 'r' to restart."
+                    state_lock.release()
+                    last_frame = header + "\n" + rows
+                    time.sleep(0.3)
                     paused = 1
                     time.sleep(0.3)
+                    state_lock.acquire()
                     while True:
                         k = None
                         with key_lock:
