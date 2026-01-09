@@ -19,6 +19,7 @@ key_lock = threading.Lock() # to protect key_pressed
 state_lock = threading.Lock()
 last_frame = ""
 stop_event = threading.Event()
+restart_event = threading.Event()
 
 def var_setup():
     global coords_list, map_height, map_width, fuel, delay, magnitude
@@ -39,6 +40,23 @@ def var_setup():
     paused = 0
     key_delay = 0.2
     playerpos = 0
+
+
+def restart_game():
+    """Reset game state for a new game."""
+    global coords_list, fuel, delay, magnitude, last_command_time
+    global last_key_time, paused, playerpos, score
+    coords_list = []  # list of [x, y]
+    score = 0
+    fuel = 1000
+    delay = 0
+    magnitude = 0
+    last_command_time = time.time()
+    last_key_time = time.time()
+    paused = 0
+    playerpos = 0
+    render.set_state(coords_list, map_width, map_height, playerpos)
+    rows = render.render_rows()
 
 
 def obstacle_gen(number):
@@ -111,6 +129,9 @@ def game_loop():
                             time.sleep(0.3)
                             break
                         time.sleep(0.1)
+                elif k == 'r' or k == 'restart':
+                    restart_game()
+                    print("Game restarted!")
                 elif k == 'q' or k == 'quit':
                     stop_event.set()
 
@@ -145,6 +166,10 @@ def post_key():
     if not key:
         return jsonify({'error': 'no key provided'}), 400
     with key_lock:
+        # 1. open lock so we don't block game loop
+        # 2. set key_pressed (game loop wouldnt see it until lock is released)
+        # 3. game loop will consume it
+        # note: we do not queue multiple keys, only the latest is kept
         globals()['key_pressed'] = key
     return jsonify({'status': 'ok', 'key': key})
 

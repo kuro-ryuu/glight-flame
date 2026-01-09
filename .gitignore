@@ -4,6 +4,8 @@ storage.db
 __pycache__/
 *.py[codz]
 *$py.class
+#local
+settings.json
 
 # C extensions
 *.so
