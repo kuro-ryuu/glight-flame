@@ -56,7 +56,6 @@ def restart_game():
     paused = 0
     playerpos = 0
     render.set_state(coords_list, map_width, map_height, playerpos)
-    rows = render.render_rows()
 
 
 def obstacle_gen(number):
@@ -86,9 +85,24 @@ def game_loop():
                 render.set_state(coords_list, map_width, map_height, playerpos)
                 rows = render.render_rows()
                 if rows == "GAME OVER":
+                    rows = "Game Over! Press 'r' to restart."
                     last_frame = header + "\n" + rows
-                    stop_event.set()
-                    continue
+
+                    paused = 1
+                    time.sleep(0.3)
+                    while True:
+                        k = None
+                        with key_lock:
+                            k = key_pressed
+                            if k is not None:
+                                globals()['key_pressed'] = None
+                        if k == 'r' or k == 'restart':
+                            restart_game()
+                            print("Game restarted!")
+                            paused = 0
+                            time.sleep(0.3)
+                            break
+                        time.sleep(0.1)
                 last_frame = header + "\n" + rows
 
             now = time.time()
