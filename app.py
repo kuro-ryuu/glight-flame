@@ -36,7 +36,7 @@ def var_setup():
     last_command_time = 0
     obs_interval = 0.6
     last_key_time = 0  # seconds
-    paused = False
+    paused = 0
     key_delay = 0.2
     playerpos = 0
 
@@ -94,9 +94,23 @@ def game_loop():
                     moved = True
                 elif k == 'd' or k == 'right':
                     playerpos += 1
-                    moved = True
+                    moved = True    
                 elif k == 'space':
-                    paused = not paused
+                    paused = 1
+                    print("Game paused. Press space to resume.")
+                    time.sleep(0.3)
+                    while True:
+                        if k == 'space':
+                            print("Game resuming in:")
+                            for i in range(3, 0, -1):
+                                print(i)
+                                time.sleep(1)
+                            print("Go!")
+                            time.sleep(0)
+                            paused = 0
+                            time.sleep(0.3)
+                            break
+                        time.sleep(0.1)
                 elif k == 'q' or k == 'quit':
                     stop_event.set()
 
