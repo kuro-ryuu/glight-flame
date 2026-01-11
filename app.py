@@ -12,198 +12,266 @@ from flask_cors import CORS
 db_connection = db_init.open_db()
 db_connection.row_factory = sqlite3.Row
 
-
-# --- Game state and setup ---
-key_pressed = None
-key_lock = threading.Lock() # to protect key_pressed
-state_lock = threading.Lock()
-last_frame = ""
-stop_event = threading.Event()
-restart_event = threading.Event()
-
-def var_setup():
-    global coords_list, map_height, map_width, fuel, delay, magnitude
-    global last_command_time, obs_interval, last_key_time, paused, key_delay
-    global playerpos, score
-    coords_list = []  # list of [x, y]
-    map_height = 10
-    map_width = 10
-    score = 0
-
-    fuel = 1000
-    delay = 0
-    magnitude = 0
-
-    last_command_time = 0
-    obs_interval = 0.6
-    last_key_time = 0  # seconds
-    paused = 0
-    key_delay = 0.2
-    playerpos = 0
-
-
-def restart_game():
-    """Reset game state for a new game."""
-    global coords_list, fuel, delay, magnitude, last_command_time
-    global last_key_time, paused, playerpos, score
-    coords_list = []  # list of [x, y]
-    score = 0
-    fuel = 1000
-    delay = 0
-    magnitude = 0
-    last_command_time = time.time()
-    last_key_time = time.time()
-    paused = 0
-    playerpos = 0
-    render.set_state(coords_list, map_width, map_height, playerpos)
-
-
-def obstacle_gen(number):
-    global score
-    if [number, -1] not in coords_list:
-        coords_list.append([number, -1])
-        score += 10
-    for i, p in enumerate(coords_list):
-        coords_list[i][1] = p[1] + 1
-    coords_list[:] = [p for p in coords_list if p[1] < map_height]
-
-
-def disaster_gen(delay, magnitude):
-    return
-
-
-def game_loop():
-    global last_frame, last_command_time, last_key_time, playerpos, fuel, paused
-    last_maintime = 0
-    while not stop_event.is_set():
-        maintime = time.time()
-        if maintime - last_maintime > 0.01:
-            last_maintime = maintime
-            # Update header and frame
-            header = f"Current map: WebGame\nScore: {score}\nFuel: {fuel}\nPlayerPos: {playerpos},{map_height - 1}"
-            with state_lock:
-                render.set_state(coords_list, map_width, map_height, playerpos)
-                rows = render.render_rows()
-                if rows == "GAME OVER":
-
-                    rows = "Game Over! Press 'r' to restart."
-                    state_lock.release()
-                    last_frame = header + "\n" + rows
-                    time.sleep(0.3)
-                    paused = 1
-                    time.sleep(0.3)
-                    state_lock.acquire()
-                    while True:
-                        k = None
-                        with key_lock:
-                            k = key_pressed
-                            if k is not None:
-                                globals()['key_pressed'] = None
-                        if k == 'r' or k == 'restart':
-                            restart_game()
-                            print("Game restarted!")
-                            paused = 0
-                            time.sleep(0.3)
-                            break
-                        time.sleep(0.1)
-                last_frame = header + "\n" + rows
-
-            now = time.time()
-            if now - last_command_time > obs_interval:
-                obstacle_gen(random.randint(0, map_width - 1))
-                disaster_gen(delay, magnitude)
-                last_command_time = now
-
-            # Handle key_pressed input (throttled by key_delay)
-            if (now - last_key_time) > key_delay:
-                with key_lock:
-                    k = key_pressed
-                    # consume
-                    # note: do not clear if None
-                    if k is not None:
-                        # reset key
-                        globals()['key_pressed'] = None
-                moved = False
-                if k == 'a' or k == 'left':
-                    playerpos -= 1
-                    moved = True
-                elif k == 'd' or k == 'right':
-                    playerpos += 1
-                    moved = True    
-                elif k == 'space':
-                    paused = 1
-                    print("Game paused. Press space to resume.")
-                    time.sleep(0.3)
-                    while True:
-                        if k == 'space':
-                            print("Game resuming in:")
-                            for i in range(3, 0, -1):
-                                print(i)
-                                time.sleep(1)
-                            print("Go!")
-                            time.sleep(0)
-                            paused = 0
-                            time.sleep(0.3)
-                            break
-                        time.sleep(0.1)
-                elif k == 'r' or k == 'restart':
-                    restart_game()
-                    print("Game restarted!")
-                elif k == 'q' or k == 'quit':
-                    stop_event.set()
-
-                if moved:
-                    if playerpos < 0:
-                        playerpos = 0
-                        moved = False
-                    if playerpos > map_width - 1:
-                        playerpos = map_width - 1
-                        moved = False
-                    if moved:
-                        fuel -= 10
-                    last_key_time = now
-        time.sleep(0.001)
-
-
-# initialize
-var_setup()
-
-# start game thread
-game_thread = threading.Thread(target=game_loop, daemon=True)
-game_thread.start()
-
 app = Flask(__name__)
 CORS(app)
 
+# --- Multiplayer: per-player state and threads ---
+import uuid
+
+
+class Player:
+    def __init__(self, pid=None):
+        self.id = pid or str(uuid.uuid4())
+        self.coords_list = []  # list of [x, y]
+        self.map_height = 10
+        self.map_width = 10
+        self.score = 0
+
+        self.fuel = 1000
+        self.delay = 0
+        self.magnitude = 0
+
+        self.last_command_time = time.time()
+        self.obs_interval = 0.6
+        self.last_key_time = time.time()
+        self.paused = 0
+        self.key_delay = 0.2
+        self.playerpos = 0
+
+        self.key_pressed = None
+        self.key_lock = threading.Lock()
+        self.state_lock = threading.Lock()
+        self.last_frame = ""
+        self.stop_event = threading.Event()
+        self.running = False
+
+        self.thread = None
+
+    def restart_game(self):
+        self.coords_list = []
+        self.score = 0
+        self.fuel = 1000
+        self.delay = 0
+        self.magnitude = 0
+        self.last_command_time = time.time()
+        self.last_key_time = time.time()
+        self.paused = 0
+        self.playerpos = 0
+        render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
+
+    def obstacle_gen(self, number):
+        if [number, -1] not in self.coords_list:
+            self.coords_list.append([number, -1])
+            self.score += 10
+        for i, p in enumerate(self.coords_list):
+            self.coords_list[i][1] = p[1] + 1
+        self.coords_list[:] = [p for p in self.coords_list if p[1] < self.map_height]
+
+    def disaster_gen(self):
+        return
+
+    def game_loop(self):
+        last_maintime = 0
+        while not self.stop_event.is_set():
+            if not self.running:
+                # when not running, show a simple prompt and skip rendering/keys
+                with self.state_lock:
+                    self.last_frame = f"Player {self.id}: Press Start"
+                time.sleep(0.1)
+                continue
+            maintime = time.time()
+            if maintime - last_maintime > 0.01:
+                last_maintime = maintime
+                header = f"Current map: WebGame\nScore: {self.score}\nFuel: {self.fuel}\nPlayerPos: {self.playerpos},{self.map_height - 1}"
+                # render state and prepare frame
+                with self.state_lock:
+                    render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
+                    rows = render.render_rows()
+                if rows == "GAME OVER":
+                    rows = "Game Over! Press 'r' to restart."
+                    # update frame and enter restart-wait loop without holding state lock
+                    self.last_frame = header + "\n" + rows
+                    self.paused = 1
+                    # wait for restart key, or break if stopped/not running
+                    while not self.stop_event.is_set() and self.running:
+                        k = None
+                        with self.key_lock:
+                            k = self.key_pressed
+                            if k is not None:
+                                self.key_pressed = None
+                        if k == 'r' or k == 'restart':
+                            self.restart_game()
+                            print(f"Player {self.id} restarted!")
+                            self.paused = 0
+                            time.sleep(0.3)
+                            break
+                        time.sleep(0.1)
+                self.last_frame = header + "\n" + rows
+
+                now = time.time()
+                if now - self.last_command_time > self.obs_interval:
+                    self.obstacle_gen(random.randint(0, self.map_width - 1))
+                    self.disaster_gen()
+                    self.last_command_time = now
+
+                # Handle key_pressed input (throttled by key_delay)
+                if (now - self.last_key_time) > self.key_delay:
+                    with self.key_lock:
+                        k = self.key_pressed
+                        if k is not None:
+                            self.key_pressed = None
+                    moved = False
+                    if k == 'a' or k == 'left':
+                        self.playerpos -= 1
+                        moved = True
+                    elif k == 'd' or k == 'right':
+                        self.playerpos += 1
+                        moved = True
+                    elif k == 'space':
+                        # pause until space pressed again, or until stopped/not running
+                        self.paused = 1
+                        print("Game paused. Press space to resume.")
+                        time.sleep(0.2)
+                        while not self.stop_event.is_set() and self.running:
+                            kk = None
+                            with self.key_lock:
+                                kk = self.key_pressed
+                                if kk is not None:
+                                    self.key_pressed = None
+                            if kk == 'space':
+                                print("Game resuming in:")
+                                for i in range(3, 0, -1):
+                                    print(i)
+                                    time.sleep(1)
+                                print("Go!")
+                                self.paused = 0
+                                time.sleep(0.1)
+                                break
+                            time.sleep(0.1)
+                    elif k == 'r' or k == 'restart':
+                        self.restart_game()
+                        print(f"Player {self.id} restarted!")
+                    elif k == 'q' or k == 'quit':
+                        self.stop_event.set()
+
+                    if moved:
+                        if self.playerpos < 0:
+                            self.playerpos = 0
+                            moved = False
+                        if self.playerpos > self.map_width - 1:
+                            self.playerpos = self.map_width - 1
+                            moved = False
+                        if moved:
+                            self.fuel -= 10
+                    if moved or k is not None:
+                        self.last_key_time = now
+            time.sleep(0.001)
+
+
+# Registry of players
+players = {}
+players_lock = threading.Lock()
+
+def create_player(pid=None):
+    p = Player(pid)
+    with players_lock:
+        players[p.id] = p
+    p.thread = threading.Thread(target=p.game_loop, daemon=True)
+    p.thread.start()
+    return p
+
+
+# create a default player for compatibility
+default_player = create_player(pid='default')
+
+
+@app.route('/start', methods=['POST'])
+def start_player():
+    data = request.get_json(silent=True) or request.form or request.values
+    pid = data.get('player') or data.get('id') or request.args.get('player') or 'default'
+    with players_lock:
+        p = players.get(pid)
+    if not p:
+        # create and start
+        p = create_player(pid)
+    # restart and mark running
+    p.restart_game()
+    p.running = True
+    return jsonify({'status': 'started', 'player': p.id})
+
+
+@app.route('/stop', methods=['POST'])
+def stop_player():
+    data = request.get_json(silent=True) or request.form or request.values
+    pid = data.get('player') or request.args.get('player') or 'default'
+    with players_lock:
+        p = players.get(pid)
+    if not p:
+        return jsonify({'error': 'player not found', 'player': pid}), 404
+    p.running = False
+    return jsonify({'status': 'stopped', 'player': pid})
+
+
 @app.route('/key', methods=['POST'])
 def post_key():
-    """Accepts JSON or form data with 'key' field (e.g. 'left','right','space','q' or 'a','d')."""
+    """Accepts JSON/form with 'key' and optional 'player' id."""
     data = request.get_json(silent=True) or request.form or request.values
     key = data.get('key')
+    pid = data.get('player') or request.args.get('player') or 'default'
     if not key:
         return jsonify({'error': 'no key provided'}), 400
-    with key_lock:
-        # 1. open lock so we don't block game loop
-        # 2. set key_pressed (game loop wouldnt see it until lock is released)
-        # 3. game loop will consume it
-        # note: we do not queue multiple keys, only the latest is kept
-        globals()['key_pressed'] = key
-    return jsonify({'status': 'ok', 'key': key})
+    with players_lock:
+        p = players.get(pid)
+    if not p:
+        return jsonify({'error': 'player not found', 'player': pid}), 404
+    if not p.running:
+        return jsonify({'error': 'player not running', 'player': pid}), 400
+    with p.key_lock:
+        p.key_pressed = key
+    return jsonify({'status': 'ok', 'key': key, 'player': pid})
 
 
 @app.route('/frame', methods=['GET'])
 def get_frame():
-    """Returns the latest rendered frame as plain text."""
-    with state_lock:
-        frame = last_frame
+    """Returns the latest rendered frame for a player as plain text.
+    Use query `?player=<id>` or omit for default player.
+    """
+    pid = request.args.get('player') or 'default'
+    with players_lock:
+        p = players.get(pid)
+    if not p:
+        return jsonify({'error': 'player not found', 'player': pid}), 404
+    with p.state_lock:
+        frame = p.last_frame
     return Response(frame, mimetype='text/plain')
 
 
 @app.route('/state', methods=['GET'])
 def get_state():
-    with state_lock:
-        s = dict(playerpos=playerpos, fuel=fuel, score=score, paused=paused)
+    pid = request.args.get('player') or 'default'
+    with players_lock:
+        p = players.get(pid)
+    if not p:
+        return jsonify({'error': 'player not found', 'player': pid}), 404
+    with p.state_lock:
+        s = dict(playerpos=p.playerpos, fuel=p.fuel, score=p.score, paused=p.paused)
     return jsonify(s)
+
+
+@app.route('/player', methods=['POST'])
+def create_player_route():
+    """Create a new player and start its game thread. Optional JSON/form field 'player' to set id."""
+    data = request.get_json(silent=True) or request.form or request.values
+    pid = data.get('player') or data.get('id')
+    p = create_player(pid)
+    return jsonify({'status': 'created', 'player': p.id})
+
+
+@app.route('/players', methods=['GET'])
+def list_players():
+    with players_lock:
+        ids = list(players.keys())
+    return jsonify({'players': ids})
 
 
 @app.route('/')
