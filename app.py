@@ -74,7 +74,6 @@ class Player:
         last_maintime = 0
         while not self.stop_event.is_set():
             if not self.running:
-                # when not running, show a simple prompt and skip rendering/keys
                 with self.state_lock:
                     self.last_frame = f"Player {self.id}: Press Start"
                 time.sleep(0.1)
@@ -82,90 +81,100 @@ class Player:
             maintime = time.time()
             if maintime - last_maintime > 0.01:
                 last_maintime = maintime
-                header = f"Current map: WebGame\nScore: {self.score}\nFuel: {self.fuel}\nPlayerPos: {self.playerpos},{self.map_height - 1}"
-                # render state and prepare frame
-                with self.state_lock:
-                    render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
-                    rows = render.render_rows()
-                if rows == "GAME OVER":
-                    rows = "Game Over! Press 'r' to restart."
-                    # update frame and enter restart-wait loop without holding state lock
-                    self.last_frame = header + "\n" + rows
-                    self.paused = 1
-                    # wait for restart key, or break if stopped/not running
-                    while not self.stop_event.is_set() and self.running:
-                        k = None
-                        with self.key_lock:
-                            k = self.key_pressed
-                            if k is not None:
-                                self.key_pressed = None
-                        if k == 'r' or k == 'restart':
-                            self.restart_game()
-                            print(f"Player {self.id} restarted!")
-                            self.paused = 0
-                            time.sleep(0.3)
-                            break
-                        time.sleep(0.1)
-                self.last_frame = header + "\n" + rows
+                header = self._build_header()
+                self._render_and_handle_game_over(header)
 
                 now = time.time()
-                if now - self.last_command_time > self.obs_interval:
-                    self.obstacle_gen(random.randint(0, self.map_width - 1))
-                    self.disaster_gen()
-                    self.last_command_time = now
-
-                # Handle key_pressed input (throttled by key_delay)
-                if (now - self.last_key_time) > self.key_delay:
-                    with self.key_lock:
-                        k = self.key_pressed
-                        if k is not None:
-                            self.key_pressed = None
-                    moved = False
-                    if k == 'a' or k == 'left':
-                        self.playerpos -= 1
-                        moved = True
-                    elif k == 'd' or k == 'right':
-                        self.playerpos += 1
-                        moved = True
-                    elif k == 'space':
-                        # pause until space pressed again, or until stopped/not running
-                        self.paused = 1
-                        print("Game paused. Press space to resume.")
-                        time.sleep(0.2)
-                        while not self.stop_event.is_set() and self.running:
-                            kk = None
-                            with self.key_lock:
-                                kk = self.key_pressed
-                                if kk is not None:
-                                    self.key_pressed = None
-                            if kk == 'space':
-                                print("Game resuming in:")
-                                for i in range(3, 0, -1):
-                                    print(i)
-                                    time.sleep(1)
-                                print("Go!")
-                                self.paused = 0
-                                time.sleep(0.1)
-                                break
-                            time.sleep(0.1)
-                    elif k == 'r' or k == 'restart':
-                        self.restart_game()
-                        print(f"Player {self.id} restarted!")
-                    elif k == 'q' or k == 'quit':
-                        self.stop_event.set()
-
-                    if moved:
-                        if self.playerpos < 0:
-                            self.playerpos = 0
-                            moved = False
-                        if self.playerpos > self.map_width - 1:
-                            self.playerpos = self.map_width - 1
-                            moved = False
-                        if moved:
-                            self.fuel -= 10
-                    if moved or k is not None:
-                        self.last_key_time = now
+                self._maybe_spawn_obstacle(now)
+                self._process_key_input(now)
             time.sleep(0.001)
+
+    def _build_header(self):
+        return f"Current map: WebGame\nScore: {self.score}\nFuel: {self.fuel}\nPlayerPos: {self.playerpos},{self.map_height - 1}"
+
+    def _render_and_handle_game_over(self, header):
+        with self.state_lock:
+            render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
+            rows = render.render_rows()
+
+        if rows == "GAME OVER":
+            rows = "Game Over! Press 'r' to restart."
+            self.last_frame = header + "\n" + rows
+            self.paused = 1
+            while not self.stop_event.is_set() and self.running:
+                k = None
+                with self.key_lock:
+                    k = self.key_pressed
+                    if k is not None:
+                        self.key_pressed = None
+                if k == 'r' or k == 'restart':
+                    self.restart_game()
+                    print(f"Player {self.id} restarted!")
+                    self.paused = 0
+                    time.sleep(0.3)
+                    break
+                time.sleep(0.1)
+            return
+
+        self.last_frame = header + "\n" + rows
+
+    def _maybe_spawn_obstacle(self, now):
+        if now - self.last_command_time > self.obs_interval:
+            self.obstacle_gen(random.randint(0, self.map_width - 1))
+            self.disaster_gen()
+            self.last_command_time = now
+
+    def _process_key_input(self, now):
+        if (now - self.last_key_time) <= self.key_delay:
+            return
+        with self.key_lock:
+            k = self.key_pressed
+            if k is not None:
+                self.key_pressed = None
+        moved = False
+        if k == 'a' or k == 'left':
+            self.playerpos -= 1
+            moved = True
+        elif k == 'd' or k == 'right':
+            self.playerpos += 1
+            moved = True
+        elif k == 'space':
+            self.paused = 1
+            print("Game paused. Press space to resume.")
+            time.sleep(0.2)
+            while not self.stop_event.is_set() and self.running:
+                kk = None
+                with self.key_lock:
+                    kk = self.key_pressed
+                    if kk is not None:
+                        self.key_pressed = None
+                if kk == 'space':
+                    print("Game resuming in:")
+                    for i in range(3, 0, -1):
+                        print(i)
+                        time.sleep(1)
+                    print("Go!")
+                    self.paused = 0
+                    time.sleep(0.1)
+                    break
+                time.sleep(0.1)
+        elif k == 'r' or k == 'restart':
+            self.restart_game()
+            print(f"Player {self.id} restarted!")
+        elif k == 'q' or k == 'quit':
+            self.stop_event.set()
+
+        if moved:
+            if self.playerpos < 0:
+                self.playerpos = 0
+                moved = False
+            if self.playerpos > self.map_width - 1:
+                self.playerpos = self.map_width - 1
+                moved = False
+            if moved:
+                self.fuel -= 10
+        if moved or k is not None:
+            self.last_key_time = now
 
 
 # Registry of players
