@@ -4,7 +4,8 @@ import threading
 import sqlite3
 import db_init
 import render
-from flask import Flask, request, jsonify, Response, render_template
+import os
+from flask import Flask, request, jsonify, Response, render_template, send_from_directory
 from flask_cors import CORS
 
 
@@ -12,7 +13,12 @@ from flask_cors import CORS
 db_connection = db_init.open_db()
 db_connection.row_factory = sqlite3.Row
 
-app = Flask(__name__)
+# Determine static folder path
+static_folder = os.path.join(os.path.dirname(__file__), 'public', 'static')
+if not os.path.exists(static_folder):
+    static_folder = os.path.join(os.path.dirname(__file__), 'templates')
+
+app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
 CORS(app)
 
 # --- Multiplayer: per-player state and threads ---
