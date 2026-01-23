@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Flight Game</title>
+  <link rel="stylesheet" href="app.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400..900&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="base">
+  <div class="hint">
+    <br><div class="controls">Controls:</div>
+    <br>Movement: A|D or "← | →".
+    <br>Space: Pause.
+    <br>Q: Quit.
+  </div>
+  <div class="game-area">
+    <h1>Flight Game</h1>
+    <div style="margin-bottom:8px">
+      <label for="playerId">Player ID:</label>
+      <input id="playerId" type="text" value="default" style="width:160px;margin-left:6px" />
+      <button id="setPlayerBtn">Set</button>
+      <button id="createPlayerBtn">Create Player</button>
+      <button id="startGameBtn">Start Game</button>
+      <button id="stopGameBtn">Stop</button>
+      <span id="playerStatus" style="margin-left:8px;color:#666"></span>
+    </div>
+    <pre id="frame">Loading...</pre>
+  </div>
+</div>
+  <script>
+    const addr="http://localhost:5000";
+    const frameEl = document.getElementById('frame');
+    const playerInput = document.getElementById('playerId');
+    const setPlayerBtn = document.getElementById('setPlayerBtn');
+    const createPlayerBtn = document.getElementById('createPlayerBtn');
+    const playerStatus = document.getElementById('playerStatus');
+
+    let playerId = (playerInput && playerInput.value) || 'default';
+    let isRunning = false;
+    const startGameBtn = document.getElementById('startGameBtn');
+    const stopGameBtn = document.getElementById('stopGameBtn');
+
+    function setPlayerFromInput(){
+      playerId = (playerInput.value || 'default').trim();
+      playerStatus.textContent = 'Using player: ' + playerId;
+    }
+
+    setPlayerBtn.addEventListener('click', ()=>{
+      setPlayerFromInput();
+    });
+
+    createPlayerBtn.addEventListener('click', async ()=>{
+      setPlayerFromInput();
+      try{
+        const r = await fetch(addr + '/player', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({player: playerId})});
+        const j = await r.json();
+        if (r.ok) playerStatus.textContent = 'Created player ' + j.player;
+        else playerStatus.textContent = 'Create failed: ' + (j.error || r.status);
+      } catch(e){ playerStatus.textContent = 'Create request failed'; }
+    });
+
+    startGameBtn.addEventListener('click', async ()=>{
+      setPlayerFromInput();
+      try{
+        const r = await fetch(addr + '/start', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({player: playerId})});
+        const j = await r.json();
+        if (r.ok){
+          isRunning = true;
+          playerStatus.textContent = 'Started player ' + j.player;
+        } else playerStatus.textContent = 'Start failed: ' + (j.error || r.status);
+      } catch(e){ playerStatus.textContent = 'Start request failed'; }
+    });
+
+    stopGameBtn.addEventListener('click', async ()=>{
+      setPlayerFromInput();
+      try{
+        const r = await fetch(addr + '/stop', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({player: playerId})});
+        const j = await r.json();
+        if (r.ok){
+          isRunning = false;
+          playerStatus.textContent = 'Stopped player ' + j.player;
+        } else playerStatus.textContent = 'Stop failed: ' + (j.error || r.status);
+      } catch(e){ playerStatus.textContent = 'Stop request failed'; }
+    });
+
+    async function fetchFrame(){
+      try {
+        if (!isRunning){
+          frameEl.textContent = 'Press Start to begin';
+          return;
+        }
+        const r = await fetch(addr + '/frame?player=' + encodeURIComponent(playerId));
+        const t = await r.text();
+        frameEl.textContent = t || '';
+      } catch(e){
+        frameEl.textContent = 'Error fetching frame';
+      }
+    }
+    setInterval(fetchFrame, 150);
+    fetchFrame();
+
+    window.addEventListener('keydown', (e)=>{
+      // do not capture when input focused or not running
+      const active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA')) return;
+      if (!isRunning) return;
+      let key = e.key;
+      if (key === 'ArrowLeft') key = 'left';
+      if (key === 'ArrowRight') key = 'right';
+      if (key === ' ') key = 'space';
+      key = key.toLowerCase();
+      fetch(addr + '/key', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({key, player: playerId})});
+      e.preventDefault();
+    });
+  </script>
+</body>
+</html>

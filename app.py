@@ -18,18 +18,107 @@ CORS(app)
 # --- Multiplayer: per-player state and threads ---
 import uuid
 
+# ==================== PROJECTILE CLASSES ====================
+class ProjectileConfig:
+    """Encapsulated configuration for projectile types."""
+    def __init__(self, symbol, speed, delay, size, collision_damage, refuel_amount=0):
+        self.symbol = symbol          # Display character
+        self.speed = speed            # Pixels per move
+        self.delay = delay            # Seconds between moves
+        self.size = size              # Visual size category: 'small', 'medium', 'large'
+        self.collision_damage = collision_damage  # Damage on collision (0 = refuel box)
+        self.refuel_amount = refuel_amount        # Fuel restored if refuel_amount > 0
+
+class Projectile:
+    """Base projectile class with configurable properties."""
+    def __init__(self, x, y=0, config=None):
+        if config is None:
+            # Default config
+            config = ProjectileConfig(symbol='*', speed=1, delay=0.1, size='medium', collision_damage=1)
+        self.config = config
+        self.x = x
+        self.y = y
+        self.last_move_time = time.time()
+        self.active = True
+    
+    @property
+    def symbol(self):
+        return self.config.symbol
+    
+    @property
+    def speed(self):
+        return self.config.speed
+    
+    @property
+    def delay(self):
+        return self.config.delay
+    
+    def move(self):
+        """Move projectile down the screen."""
+        now = time.time()
+        if now - self.last_move_time >= self.delay:
+            self.y += self.speed  # Move DOWN the screen
+            self.last_move_time = now
+        if self.y >= 10:  # Out of bounds
+            self.active = False
+            return False
+        return True
+    
+    def on_collision(self, player):
+        """Handle collision with player. Override in subclasses."""
+        pass
+    
+    def __repr__(self):
+        return f"{self.__class__.__name__}(x={self.x}, y={self.y})"
+
+
+class Meteorite(Projectile):
+    """Fast, large, damaging projectile."""
+    _config = ProjectileConfig(
+        symbol='●',      # Large circle
+        speed=1,         # Twice as fast
+        delay=0.15,      # Faster movement interval
+        size='large',
+        collision_damage=50  # Heavy damage
+    )
+    
+    def __init__(self, x, y=0):
+        super().__init__(x, y, self._config)
+    
+    def on_collision(self, player):
+        """Meteorite deals damage (instant game over in this version)."""
+        player.fuel = 0  # Instant death
+
+
+class SupplyBox(Projectile):
+    """Slow, small, fuel-restoring projectile."""
+    _config = ProjectileConfig(
+        symbol='□',      # Small square
+        speed=1,       # Half speed
+        delay=0.4,      # Slower movement interval
+        size='small',
+        collision_damage=0,      # No damage
+        refuel_amount=200        # Restores fuel
+    )
+    
+    def __init__(self, x, y=0):
+        super().__init__(x, y, self._config)
+    
+    def on_collision(self, player):
+        """Supply box restores fuel."""
+        player.fuel = min(player.fuel + self.config.refuel_amount, player.max_fuel)
+
 
 class Player:
     def __init__(self, pid=None):
         self.id = pid or str(uuid.uuid4())
-        self.coords_list = []  # list of [x, y]
+        self.projectiles = []  # list of Projectile objects (Meteorite, SupplyBox, etc.)
         self.map_height = 10
         self.map_width = 10
         self.score = 0
 
         self.fuel = 1000
-        self.delay = 0
-        self.magnitude = 0
+        self.max_fuel = 1000
 
         self.last_command_time = time.time()
         self.obs_interval = 0.6
@@ -48,27 +137,45 @@ class Player:
         self.thread = None
 
     def restart_game(self):
-        self.coords_list = []
+        self.projectiles = []
         self.score = 0
-        self.fuel = 1000
-        self.delay = 0
-        self.magnitude = 0
+        self.fuel = self.max_fuel
         self.last_command_time = time.time()
         self.last_key_time = time.time()
         self.paused = 0
         self.playerpos = 0
-        render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
+        self._update_render_state()
 
     def obstacle_gen(self, number):
-        if [number, -1] not in self.coords_list:
-            self.coords_list.append([number, -1])
-            self.score += 10
-        for i, p in enumerate(self.coords_list):
-            self.coords_list[i][1] = p[1] + 1
-        self.coords_list[:] = [p for p in self.coords_list if p[1] < self.map_height]
+        """Generate a random projectile (mostly meteorites, occasional supply boxes)."""
+        projectile_type = random.choices(
+            [Meteorite, SupplyBox],
+            weights=[70, 30],  # 70% meteorites, 30% supply boxes
+            k=1
+        )[0]
+        projectile = projectile_type(x=number, y=-1)
+        self.projectiles.append(projectile)
+        self.score += 10
 
     def disaster_gen(self):
+        """Placeholder for future disaster logic."""
         return
+
+    def _update_render_state(self):
+        """Pass projectiles to render system for symbol-aware rendering."""
+        render.set_state(self.projectiles, self.map_width, self.map_height, self.playerpos)
+
+    def _update_projectiles(self):
+        """Move projectiles and handle collisions."""
+        for projectile in self.projectiles[:]:  # Iterate over copy
+            if not projectile.move():
+                self.projectiles.remove(projectile)
+                continue
+            
+            # Check collision with player
+            if projectile.x == self.playerpos and projectile.y == self.map_height - 1:
+                projectile.on_collision(self)
+                self.projectiles.remove(projectile)
 
     def game_loop(self):
         last_maintime = 0
@@ -82,19 +189,20 @@ class Player:
             if maintime - last_maintime > 0.01:
                 last_maintime = maintime
                 header = self._build_header()
-                self._render_and_handle_game_over(header)
-
+                
                 now = time.time()
                 self._maybe_spawn_obstacle(now)
+                self._update_projectiles()
                 self._process_key_input(now)
+                self._render_and_handle_game_over(header)
             time.sleep(0.001)
 
     def _build_header(self):
         return f"Current map: WebGame\nScore: {self.score}\nFuel: {self.fuel}\nPlayerPos: {self.playerpos},{self.map_height - 1}"
 
     def _render_and_handle_game_over(self, header):
+        self._update_render_state()
         with self.state_lock:
-            render.set_state(self.coords_list, self.map_width, self.map_height, self.playerpos)
             rows = render.render_rows()
 
         if rows == "GAME OVER":
