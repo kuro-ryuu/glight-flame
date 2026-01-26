@@ -3,7 +3,7 @@ import time
 import threading
 import sqlite3
 import db_init
-import render
+import render_localhosted as render
 from flask import Flask, request, jsonify, Response, render_template
 from flask_cors import CORS
 
